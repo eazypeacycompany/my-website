@@ -1,0 +1,115 @@
+body {
+    font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    background-color: #fff;
+}
+
+/* Navigation Bar */
+nav {
+    background-color: #f8f9fa;
+    padding: 15px 0;
+    border-bottom: 1px solid #e7e7e7;
+    position: sticky; /* Keeps the menu at the top when scrolling */
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+    text-decoration: none;
+    color: #333;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #555;
+    margin-left: 20px;
+    font-weight: 500;
+}
+
+.nav-links a:hover {
+    color: #007bff;
+}
+
+/* Big Hero Header */
+.hero {
+    background-color: #007bff; /* A nice blue color */
+    color: white;
+    text-align: center;
+    padding: 100px 20px;
+}
+
+.hero h1 {
+    font-size: 50px;
+    margin: 0 0 10px 0;
+}
+
+.hero p {
+    font-size: 24px;
+    margin: 0;
+    font-weight: 300;
+}
+
+/* Main Content Sections */
+main {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.content-section {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.section-link {
+    text-decoration: none;
+    color: #333;
+    display: block; /* Makes the whole area clickable */
+    padding: 20px;
+    transition: transform 0.2s; /* Smooth animation */
+}
+
+/* Makes the text bump up slightly when you hover over it */
+.section-link:hover {
+    transform: translateY(-5px); 
+}
+
+.content-section h2 {
+    font-size: 32px;
+    margin-bottom: 5px;
+}
+
+.content-section h3 {
+    font-size: 20px;
+    color: #6c757d;
+    font-weight: 300;
+    margin-top: 0;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #eaeaea;
+    margin-top: 30px;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 30px;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    margin-top: 50px;
+}

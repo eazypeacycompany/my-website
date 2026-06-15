@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snowman Sled Rush</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:#dff6ff;
+    font-family:Arial, Helvetica, sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    color:#123;
+}
+
+#homeLink{
+    position:absolute;
+    top:15px;
+    left:15px;
+    font-weight:bold;
+    text-decoration:none;
+    color:#0a4f7a;
+    background:white;
+    padding:8px 14px;
+    border-radius:8px;
+    border:2px solid #7ec8ff;
+}
+
+h1{
+    margin-top:55px;
+    margin-bottom:10px;
+    color:#0b4c74;
+}
+
+#container{
+    display:flex;
+    gap:15px;
+    align-items:flex-start;
+}
+
+#gameWrapper{
+    position:relative;
+}
+
+canvas{
+    background:
+        repeating-linear-gradient(
+            180deg,
+            #f7fcff 0px,
+            #f7fcff 40px,
+            #eef9ff 40px,
+            #eef9ff 80px
+        );
+    border:4px solid #6db8eb;
+    border-radius:12px;
+}
+
+#sidebar{
+    width:240px;
+    background:white;
+    border:3px solid #6db8eb;
+    border-radius:12px;
+    padding:12px;
+}
+
+.panel{
+    margin-bottom:18px;
+}
+
+.panel h3{
+    margin-bottom:8px;
+    color:#0b4c74;
+}
+
+.stat{
+    margin:8px 0;
+    font-weight:bold;
+}
+
+.progressOuter{
+    width:100%;
+    height:20px;
+    background:#d9eefb;
+    border-radius:10px;
+    overflow:hidden;
+    margin-top:6px;
+}
+
+.progressInner{
+    width:0%;
+    height:100%;
+    background:#4aa9e8;
+    transition:width .2s;
+}
+
+.reward{
+    background:#ecfbff;
+    border:1px solid #9ddcf9;
+    padding:6px;
+    border-radius:6px;
+    margin:4px 0;
+    font-size:14px;
+}
+
+#leaderboard ol{
+    padding-left:20px;
+}
+
+#gameOver{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,.75);
+    display:none;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    color:white;
+    text-align:center;
+}
+
+#gameOver h2{
+    font-size:42px;
+    margin-bottom:10px;
+}
+
+#controls{
+    margin-top:15px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+input{
+    padding:10px;
+    border-radius:8px;
+    border:2px solid #7ec8ff;
+}
+
+button{
+    padding:10px 18px;
+    border:none;
+    background:#4aa9e8;
+    color:white;
+    font-weight:bold;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#248fd6;
+}
+
+.instructions{
+    max-width:900px;
+    text-align:center;
+    margin:12px;
+    color:#335;
+}
+
+.key{
+    background:white;
+    padding:2px 8px;
+    border-radius:5px;
+    border:1px solid #aaa;
+}
+</style>
+</head>
+<body>
+
+<a id="homeLink" href="../index.html">Home</a>
+
+<h1>☃ Snowman Sled Rush</h1>
+
+<div class="instructions">
+Move with <span class="key">←</span> and <span class="key">→</span>.
+Hit ramps to jump over obstacles. The farther you travel, the faster the sled goes and the more obstacles appear.
+Earn rewards every 250 distance units.
+</div>
+
+<div id="container">
+
+    <div id="gameWrapper">
+        <canvas id="game" width="700" height="800"></canvas>
+
+        <div id="gameOver">
+            <h2>Game Over</h2>
+            <p id="finalScore"></p>
+        </div>
+    </div>
+
+    <div id="sidebar">
+
+        <div class="panel">
+            <h3>Distance</h3>
+            <div class="stat">Current: <span id="distance">0</span></div>
+            <div class="stat">Best: <span id="bestDistance">0</span></div>
+
+            <div class="progressOuter">
+                <div class="progressInner" id="distanceBar"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Rewards</h3>
+            <div id="rewardList"></div>
+        </div>
+
+        <div class="panel" id="leaderboard">
+            <h3>Top 3 Scores</h3>
+            <ol id="topScores"></ol>
+        </div>
+
+    </div>
+
+</div>
+
+<div id="controls">
+    <input id="playerName" maxlength="20" placeholder="Enter your name">
+    <button id="restartBtn">Restart Game</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const distanceEl = document.getElementById("distance");
+const bestDistanceEl = document.getElementById("bestDistance");
+const distanceBar = document.getElementById("distanceBar");
+const rewardList = document.getElementById("rewardList");
+const restartBtn = document.getElementById("restartBtn");
+const gameOverScreen = document.getElementById("gameOver");
+const finalScore = document.getElementById("finalScore");
+const playerNameInput = document.getElementById("playerName");
+
+let keys = {};
+let gameRunning = true;
+
+const laneMin = 70;
+const laneMax = canvas.width - 70;
+
+let sled;
+let obstacles;
+let ramps;
+let distance;
+let speed;
+let spawnTimer;
+let rewardMilestone;
+let bestDistance = localStorage.getItem("sledBestDistance") || 0;
+
+bestDistanceEl.textContent = bestDistance;
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function loadLeaderboard(){
+    return JSON.parse(localStorage.getItem("sledLeaderboard") || "[]");
+}
+
+function saveLeaderboard(list){
+    localStorage.setItem("sledLeaderboard", JSON.stringify(list));
+}
+
+function updateLeaderboardDisplay(){
+    const list = loadLeaderboard();
+    const ul = document.getElementById("topScores");
+    ul.innerHTML = "";
+
+    if(list.length === 0){
+        ul.innerHTML = "<li>No scores yet</li>";
+        return;
+    }
+
+    list.forEach(item=>{
+        const li = document.createElement("li");
+        li.textContent = `${item.name} - ${item.score}`;
+        ul.appendChild(li);
+    });
+}
+
+function submitScore(score){
+    let name = playerNameInput.value.trim();
+    if(name === "") name = "Anonymous";
+
+    let board = loadLeaderboard();
+
+    board.push({
+        name,
+        score
+    });
+
+    board.sort((a,b)=>b.score-a.score);
+    board = board.slice(0,3);
+
+    saveLeaderboard(board);
+    updateLeaderboardDisplay();
+}
+
+function resetGame(){
+
+    sled = {
+        x: canvas.width/2,
+        y: canvas.height-150,
+        width: 65,
+        height: 45,
+        bob: 0,
+        jumping:false,
+        jumpHeight:0,
+        jumpVelocity:0
+    };
+
+    obstacles = [];
+    ramps = [];
+
+    distance = 0;
+    speed = 5;
+    spawnTimer = 0;
+    rewardMilestone = 250;
+
+    rewardList.innerHTML = "";
+    gameRunning = true;
+    gameOverScreen.style.display = "none";
+}
+
+function createObstacle(){
+
+    const types = ["tree","trash","wall"];
+
+    obstacles.push({
+        type: types[Math.floor(Math.random()*types.length)],
+        x: Math.random() * (laneMax-laneMin) + laneMin,
+        y: -60,
+        width: 50,
+        height: 50
+    });
+}
+
+function createRamp(){
+    ramps.push({
+        x: Math.random() * (laneMax-laneMin) + laneMin,
+        y: -40,
+        width: 70,
+        height: 20
+    });
+}
+
+function rewardReached(){
+
+    const reward = document.createElement("div");
+    reward.className = "reward";
+
+    const rewards = [
+        "❄ Speed Bonus",
+        "☃ Snowman Trophy",
+        "🎿 Sled Upgrade",
+        "🏔 Mountain Badge",
+        "⭐ Distance Star"
+    ];
+
+    reward.textContent =
+        rewardMilestone + " Distance: " +
+        rewards[Math.floor(Math.random()*rewards.length)];
+
+    rewardList.prepend(reward);
+
+    rewardMilestone += 250;
+}
+
+function gameOver(){
+
+    if(!gameRunning) return;
+
+    gameRunning = false;
+
+    submitScore(Math.floor(distance));
+
+    if(distance > bestDistance){
+        bestDistance = Math.floor(distance);
+        localStorage.setItem("sledBestDistance", bestDistance);
+        bestDistanceEl.textContent = bestDistance;
+    }
+
+    finalScore.innerHTML =
+        `Distance Travelled: <strong>${Math.floor(distance)}</strong>`;
+    gameOverScreen.style.display = "flex";
+}
+
+function update(){
+
+    if(!gameRunning) return;
+
+    distance += speed * 0.15;
+
+    speed += 0.0008;
+
+    distanceEl.textContent = Math.floor(distance);
+
+    if(distance >= rewardMilestone){
+        rewardReached();
+    }
+
+    distanceBar.style.width =
+        ((distance % 250)/250)*100 + "%";
+
+    if(keys["ArrowLeft"]){
+        sled.x -= 7;
+    }
+
+    if(keys["ArrowRight"]){
+        sled.x += 7;
+    }
+
+    sled.x = Math.max(laneMin, Math.min(laneMax, sled.x));
+
+    sled.bob += 0.15;
+
+    if(sled.jumping){
+        sled.jumpHeight += sled.jumpVelocity;
+        sled.jumpVelocity -= 0.8;
+
+        if(sled.jumpHeight <= 0){
+            sled.jumpHeight = 0;
+            sled.jumping = false;
+        }
+    }
+
+    spawnTimer++;
+
+    const difficulty = Math.min(70, speed*2);
+
+    if(spawnTimer > Math.max(18, 70 - difficulty)){
+        spawnTimer = 0;
+
+        createObstacle();
+
+        if(Math.random() < 0.35){
+            createObstacle();
+        }
+
+        if(Math.random() < 0.18){
+            createRamp();
+        }
+    }
+
+    ramps.forEach(r=>{
+        r.y += speed;
+    });
+
+    obstacles.forEach(o=>{
+        o.y += speed;
+    });
+
+    ramps = ramps.filter(r=>r.y < canvas.height+50);
+    obstacles = obstacles.filter(o=>o.y < canvas.height+80);
+
+    ramps.forEach(r=>{
+
+        if(
+            !sled.jumping &&
+            Math.abs(sled.x-r.x) < 45 &&
+            r.y > sled.y-20 &&
+            r.y < sled.y+20
+        ){
+            sled.jumping = true;
+            sled.jumpVelocity = 12;
+        }
+    });
+
+    obstacles.forEach(o=>{
+
+        if(sled.jumping && sled.jumpHeight > 35){
+            return;
+        }
+
+        const hit =
+            Math.abs(sled.x-o.x) < 40 &&
+            o.y > sled.y-35 &&
+            o.y < sled.y+35;
+
+        if(hit){
+            gameOver();
+        }
+    });
+}
+
+function drawBackground(){
+
+    ctx.fillStyle="#dff6ff";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    for(let i=0;i<25;i++){
+
+        let y =
+            ((i*60)+(distance*speed))%
+            (canvas.height+60);
+
+        ctx.fillStyle="#f5fbff";
+        ctx.fillRect(0,y,canvas.width,35);
+    }
+}
+
+function drawTree(x,y){
+
+    ctx.fillStyle="#5a3316";
+    ctx.fillRect(x-6,y+12,12,25);
+
+    ctx.fillStyle="#1f8f47";
+    ctx.beginPath();
+    ctx.moveTo(x,y-35);
+    ctx.lineTo(x-25,y+15);
+    ctx.lineTo(x+25,y+15);
+    ctx.fill();
+}
+
+function drawTrash(x,y){
+
+    ctx.fillStyle="#777";
+    ctx.fillRect(x-18,y-18,36,36);
+
+    ctx.fillStyle="#999";
+    ctx.fillRect(x-22,y-22,44,8);
+}
+
+function drawWall(x,y){
+
+    ctx.fillStyle="#888";
+    ctx.fillRect(x-30,y-15,60,30);
+
+    ctx.strokeStyle="#666";
+
+    for(let i=0;i<3;i++){
+        ctx.beginPath();
+        ctx.moveTo(x-30,y-15+i*10);
+        ctx.lineTo(x+30,y-15+i*10);
+        ctx.stroke();
+    }
+}
+
+function draw(){
+
+    drawBackground();
+
+    ramps.forEach(r=>{
+
+        ctx.fillStyle="#a95e26";
+
+        ctx.beginPath();
+        ctx.moveTo(r.x-35,r.y+10);
+        ctx.lineTo(r.x+35,r.y+10);
+        ctx.lineTo(r.x+20,r.y-10);
+        ctx.lineTo(r.x-20,r.y-10);
+        ctx.closePath();
+        ctx.fill();
+    });
+
+    obstacles.forEach(o=>{
+
+        if(o.type==="tree"){
+            drawTree(o.x,o.y);
+        }
+
+        if(o.type==="trash"){
+            drawTrash(o.x,o.y);
+        }
+
+        if(o.type==="wall"){
+            drawWall(o.x,o.y);
+        }
+    });
+
+    const tilt = Math.sin(sled.bob) * 0.08;
+
+    ctx.save();
+
+    ctx.translate(
+        sled.x,
+        sled.y - sled.jumpHeight
+    );
+
+    ctx.rotate(tilt);
+
+    // sled
+    ctx.fillStyle="#d92d2d";
+    ctx.fillRect(-35,5,70,18);
+
+    ctx.strokeStyle="#8d0000";
+    ctx.lineWidth=3;
+
+    ctx.beginPath();
+    ctx.moveTo(-35,22);
+    ctx.lineTo(-45,28);
+    ctx.moveTo(35,22);
+    ctx.lineTo(45,28);
+    ctx.stroke();
+
+    // snowman
+    ctx.fillStyle="white";
+
+    ctx.beginPath();
+    ctx.arc(0,-12,15,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(0,-34,10,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="black";
+    ctx.beginPath();
+    ctx.arc(-3,-36,1.5,0,Math.PI*2);
+    ctx.arc(3,-36,1.5,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="orange";
+    ctx.beginPath();
+    ctx.moveTo(0,-32);
+    ctx.lineTo(10,-30);
+    ctx.lineTo(0,-28);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+restartBtn.addEventListener("click", resetGame);
+
+updateLeaderboardDisplay();
+resetGame();
+loop();
+</script>
+
+</body>
+</html>
